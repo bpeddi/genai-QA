@@ -158,7 +158,7 @@ def parse_pdf(file: BytesIO) -> Tuple[List[str], str]:
         text = re.sub(r"(?<!\n\s)\n(?!\s\n)", " ", text.strip())
         text = re.sub(r"\n\s*\n", "\n\n", text)
         output.append(text)
-    return output
+    return output # type: ignore
 
 
 def text_to_docs(text: List[str]) -> List[Document]:
@@ -194,10 +194,30 @@ def get_documents_from_pdf(pdf_files):
     documents = []
     for pdf_file in pdf_files:
         text = parse_pdf(BytesIO(pdf_file.getvalue()))
-        documents = documents + text_to_docs(text)
+        # if isinstance(text, str):
+        #     text = [text]
+        documents = documents + text_to_docs(text) # type: ignore
     return documents
 
 def main():
+#     st.set_page_config(
+#     page_title='GenAI use cases',
+#     layout="wide",
+#     # initial_sidebar_state="expanded",
+# )
+    st.set_page_config(
+    page_title="Ex-stream-ly Cool App",
+    page_icon="🧊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://www.extremelycoolapp.com/help',
+        'Report a bug': "https://www.extremelycoolapp.com/bug",
+        'About': "# This is a header. This is an *extremely* cool app!"
+    }
+)
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = None
     # Load environment variables
     load_dotenv()
     st.title ( " Question Answering with Large Documents using LangChain ")
@@ -208,8 +228,31 @@ def main():
         documents = []
         documents = get_documents_from_pdf(pdf_files)
         # Print the documents (this will be displayed in the terminal if running locally)
-        print(documents)
-        # Initialize PDF loader
+        # print(documents[0].page_content)
+
+        col1, col2 = st.columns(2)
+        col1.subheader('Your Text ')
+        # col1.text_area("",documents,height=400)
+        col1.write(documents)
+        col2.subheader('Your Chat')
+        st.subheader("Ask your Question here ?")
+        prompt = col2.text_input("how to make veg curry ?")
+        
+        if prompt:
+            st.session_state["chat_history"] = prompt
+            with col2.chat_message("user") : 
+                st.write(prompt)
+                llm = ChatOpenAI(temperature=0)
+            with col2.chat_message("assistant"):
+                answer=stuff_chain(llm, documents, prompt)
+                st.write(answer)
+                st.session_state["chat_history"] = answer
+            chat = st.session_state.get("chat_history")
+            print(type(chat))
+        #     for i, message in enumerate(st.session_state.chat_history):
+        #         print(i)
+        #         print(message)
+        # # Initialize PDF loader
         # text_splitter = RecursiveCharacterTextSplitter(
         #     chunk_size=1000,
         #     separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""],
@@ -225,16 +268,16 @@ def main():
         # print(type(chunks))
         # print(chunks)
         # # Initialize ChatOpenAI model
-        llm = ChatOpenAI(temperature=0)
+        
 
         # # Example questions
-        question1 = "how to make veg curry ?"
-        question2 = "how to make veg curry ?"
+        # question1 = "how to make veg curry ?"
+        # question2 = "how to make veg curry ?"
         # question3 = "how to make airplane ?"
 
         # # Execute chains for each question
         # print(map_reduce_chain(llm, documents, question1))
-        print(stuff_chain(llm, documents, question2))
+        
         # print(stuff_chain(llm, pages, question3))
 
 if __name__ == '__main__':
